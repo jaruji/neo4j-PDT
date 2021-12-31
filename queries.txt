@@ -1,0 +1,83 @@
+2.
+MATCH (acc1:Account)<-[fol:FOLLOWS]-(acc2:Account) RETURN acc1.id as id, acc1.screen_name as name, acc1.followers_count as actual_follower_count, 
+count(fol) as neo4j_follower_count
+ORDER BY count(fol) DESC LIMIT 5
+
+3.
+MATCH (katyP:Account),(kimK:Account),
+p = shortestPath((katyP)-[:FOLLOWS*]-(kimK)) 
+WHERE katyP.screen_name = "katyperry" AND kimK.screen_name = "KimKardashian"
+RETURN p
+
+MATCH (katyP:Account),(kimK:Account),
+p = allShortestPaths((katyP)-[:FOLLOWS*]-(kimK)) 
+WHERE katyP.screen_name = "katyperry" AND kimK.screen_name = "KimKardashian"
+RETURN p
+
+4.
+CALL
+{
+    MATCH (acc:Account)-[p:POSTS]->(t:Tweet)<-[ret:RETWEETS]-()
+    RETURN acc, count(ret) as acc_retweet_count ORDER BY acc_retweet_count DESC LIMIT 10
+}
+MATCH (acc)-[p:POSTS]->(t:Tweet)<-[ret:RETWEETS]-()
+RETURN acc.screen_name as name, acc_retweet_count, t.id as tweet_id, t.content as content, count(ret) as tweet_retweet_count ORDER BY tweet_retweet_count ASC
+LIMIT 10
+
+5.
+CALL{
+    MATCH (acc1:Account)-[p:POSTS]->(t:Tweet)<-[ret:RETWEETS]-() 
+    WHERE acc1.screen_name = 'realDonaldTrump'
+    RETURN acc1, t, count(ret) as neo4j_retweet_count
+    ORDER BY count(ret) DESC
+    LIMIT 1
+}
+CREATE(acc2:Account {screen_name: 'jaruji', name: 'Juraj'})-[f:FOLLOWS]->(acc1), (acc2)-[p:POSTS]->(myT:Tweet {content: "Hello TRUMP"})<-[r:RETWEETS]-()
+RETURN acc1.screen_name, neo4j_retweet_count, t.id, t.content, acc2.screen_name, myT.content
+
+6.
+CALL{
+    MATCH (acc1:Account)-[fol1:FOLLOWS]->(accounts:Account)
+    WHERE acc1.screen_name = '777stl'
+    RETURN acc1, accounts
+}
+MATCH (acc2:Account)-[fol2:FOLLOWS]->(accounts)
+WHERE acc1 <> acc2 AND NOT (acc1)-[:FOLLOWS]->(acc2)
+RETURN acc2.screen_name as screen_name, count(fol2) as identical_follow_count
+ORDER BY count(fol2) DESC
+LIMIT 10
+
+7.
+CALL{
+   MATCH (acc1: Account)-[p:POSTS]->(:Tweet)-[ret1:RETWEETS*]->(t:Tweet)
+   WHERE acc1.screen_name = 'DaynerWilson'
+   RETURN acc1, t  
+}
+MATCH (acc2: Account)-[p:POSTS]->(:Tweet)-[ret2:RETWEETS*]->(t)
+WHERE acc1 <> acc2
+RETURN acc2.screen_name, count(ret2) as identical_retweets_count
+ORDER BY count(ret2) DESC
+LIMIT 10
+
+8.
+MATCH (acc1:Account)-[:POSTS]->(t1:Tweet),
+(acc2:Account)-[:FOLLOWS*1..5]->(acc1),
+(acc2)-[:POSTS]->(t2:Tweet) 
+WHERE t1.id = '1289380305728503808' AND NOT (t2)-[:RETWEETS*]->(t1)
+RETURN t1.content as tweet1, t2.content as tweet2, apoc.coll.intersection(split(t1.content, " "), split(t2.content, " ")) as matching_words, size(apoc.coll.intersection(split(t1.content, " "), split(t2.content, " "))) as matching_words_count
+ORDER BY matching_words_count DESC
+LIMIT 5
+
+BONUS:
+CALL{
+    MATCH (donaldT:Account)-[:POSTS]->(dtt:Tweet)
+    WHERE donaldT.screen_name = 'realDonaldTrump'
+    return donaldT, dtt
+}
+CALL{
+    MATCH (katyP:Account)-[:POSTS]->(:Tweet)-[:RETWEETS*]->(t:Tweet)<-[:POSTS]-(:Account)-[:POSTS]->(kpt:Tweet)
+    WHERE katyP.screen_name = 'katyperry'
+    return katyP, kpt
+}
+MATCH p = AllShortestPaths((dtt)-[:RETWEETS*]-(kpt))
+RETURN p
